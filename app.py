@@ -2,7 +2,7 @@ import streamlit as st
 import json
 from datetime import datetime
 
-st.title("多占術総合占断アプリ（試作）")
+st.title("占いアプリ（GPTなし試作版）")
 
 # ---- 入力フォーム ----
 with st.form("input_form"):
@@ -15,7 +15,7 @@ with st.form("input_form"):
     submitted = st.form_submit_button("占断する")
 
 if submitted:
-    # 仮の命盤データ（本当はここでライブラリを使って計算する）
+    # --- ダミーの命盤データ（本来は計算処理を入れる） ---
     result = {
         "name": name,
         "birth": str(birth_date) + " " + str(birth_time),
@@ -32,15 +32,7 @@ if submitted:
     st.subheader("命盤データ（JSON形式）")
     st.json(result)
 
-    # ---- GPT APIに投げる ----
-    import openai
-    openai.api_key = st.secrets["OPENAI_API_KEY"]
-
-    prompt = f"以下の占術データを総合して、2000字程度で詳細に占断してください：\n\n{json.dumps(result, ensure_ascii=False, indent=2)}"
-    response = openai.ChatCompletion.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}]
-    )
-
-    st.subheader("GPTによる総合占断")
-    st.write(response["choices"][0]["message"]["content"])
+    # --- 簡単な占断メッセージ（AIなし） ---
+    st.subheader("占断メッセージ（サンプル）")
+    st.write(f"{name}さんは『学びと探究』に強い傾向があります。"
+             f"生年月日：{birth_date} を基盤に、人生の課題は「調和」と「直感の活用」です。")
