@@ -2,7 +2,10 @@ import streamlit as st
 import json
 from datetime import datetime
 
-st.title("占いアプリ（GPTなし試作版）")
+# 紫微斗数ライブラリ
+from pyziwei import ZiweiChart
+
+st.title("占いアプリ（JSON出力版）")
 
 # ---- 入力フォーム ----
 with st.form("input_form"):
@@ -15,24 +18,22 @@ with st.form("input_form"):
     submitted = st.form_submit_button("占断する")
 
 if submitted:
-    # --- ダミーの命盤データ（本来は計算処理を入れる） ---
-    result = {
+    dt = datetime.combine(birth_date, birth_time)
+
+    # ---- 紫微斗数計算 ----
+    # pyziweiは生年月日・出生時間・性別で命盤計算
+    chart = ZiweiChart(year=dt.year, month=dt.month, day=dt.day,
+                       hour=dt.hour, gender=gender)
+    chart.calculate()  # フル計算
+    
+    # JSON化
+    chart_data = {
         "name": name,
-        "birth": str(birth_date) + " " + str(birth_time),
-        "place": birth_place,
+        "birth": str(dt),
+        "birth_place": birth_place,
         "gender": gender,
-        "school": school,
-        "chart": {
-            "ziwei": {"命宮": "天同", "身宮": "太陰"},
-            "astrology": {"Sun": "26° Sagittarius", "Moon": "12° Leo"},
-            "numerology": {"life_path": 7}
-        }
+        "ziwei_chart": chart.to_dict()  # 十二宮・星曜・吉凶など
     }
 
-    st.subheader("命盤データ（JSON形式）")
-    st.json(result)
-
-    # --- 簡単な占断メッセージ（AIなし） ---
-    st.subheader("占断メッセージ（サンプル）")
-    st.write(f"{name}さんは『学びと探究』に強い傾向があります。"
-             f"生年月日：{birth_date} を基盤に、人生の課題は「調和」と「直感の活用」です。")
+    st.subheader("紫微斗数命盤データ（JSON形式）")
+    st.json(chart_data)
