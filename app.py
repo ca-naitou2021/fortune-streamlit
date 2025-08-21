@@ -2,7 +2,7 @@ import streamlit as st
 import json
 from datetime import datetime
 from flatlib.chart import Chart
-from flatlib import geolatlng, datetime as fdt, aspects
+from flatlib import GeoPos, datetime as fdt, aspects
 from geopy.geocoders import Nominatim
 from timezonefinder import TimezoneFinder
 import pytz
@@ -44,7 +44,7 @@ if submitted:
             date_str = utc_dt.strftime("%Y/%m/%d")
             time_str = utc_dt.strftime("%H:%M")
             fdate = fdt.Date(date_str, time_str, "+00:00")
-            pos = geolatlng.LatLng(birth_place_lat, birth_place_lon)
+            pos = GeoPos(birth_place_lat, birth_place_lon)
 
             chart = Chart(fdate, pos)
 
