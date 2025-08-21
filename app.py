@@ -15,7 +15,7 @@ st.title("西洋占星術ホロスコープ計算アプリ")
 with st.form("input_form"):
     name = st.text_input("名前")
     birth_date = st.date_input("生年月日", datetime(1990, 1, 1))
-    birth_time = st.time_input("出生時間")
+    birth_time_str = st.text_input("出生時間", "00:00")
     birth_place_name = st.text_input("出生地（例: 東京, 大阪市天王寺区など）", "東京")
     submitted = st.form_submit_button("ホロスコープを計算する")
 
@@ -38,6 +38,8 @@ if submitted:
         else:
             # ---- ローカル時刻をUTCに変換 ----
             local_tz = pytz.timezone(tz_name)
+            # 入力時間をパース
+            birth_time = datetime.strptime(birth_time_str, "%H:%M").time()
             naive_dt = datetime.combine(birth_date, birth_time)
             local_dt = local_tz.localize(naive_dt)
             utc_dt = local_dt.astimezone(pytz.utc)
