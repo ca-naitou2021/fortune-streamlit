@@ -38,7 +38,7 @@ if submitted:
         else:
             # ---- ローカル時刻をUTCに変換 ----
             local_tz = pytz.timezone(tz_name)
-            naive_dt = datetime.combine(birth_date, birth_time)
+            naive_dt = datetime.datetime.combine(birth_date, birth_time)
             local_dt = local_tz.localize(naive_dt)
             utc_dt = local_dt.astimezone(pytz.utc)
 
