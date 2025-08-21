@@ -31,8 +31,8 @@ if submitted:
     # flatlib用日時（ここではタイムゾーン+00:00に仮置き）
     date_str = dt.strftime("%Y/%m/%d")
     time_str = dt.strftime("%H:%M")
-    fdate = fdt.Date(date_str, time_str, "+00:00")
-    pos = geolatlng.LatLng(birth_place_lat, birth_place_lon)
+    fdate = fdt(date_str, time_str, "+00:00")
+    pos = GeoPos(birth_place_lat, birth_place_lon)
 
     chart = Chart(fdate, pos)
 
