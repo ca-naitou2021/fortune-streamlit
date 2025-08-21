@@ -34,6 +34,10 @@ if submitted:
     fdate = fdt(date_str, time_str, "+00:00")
     pos = GeoPos(location.latitude, location.longitude)
 
+    # デバッグ内容出力
+    print("fdate:", fdate)
+    print("pos:", pos)
+
     chart = Chart(fdate, pos)
 
     # ---- 惑星＋感受点 ----
