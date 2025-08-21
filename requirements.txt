@@ -3,4 +3,4 @@ flatlib
 pytz
 geopy
 timezonefinder
-pyswisseph
+swisseph
