@@ -3,6 +3,7 @@ import json
 from datetime import datetime
 from flatlib.chart import Chart
 from flatlib.geopos import GeoPos
+from flatlib.datetime import datetime as fdt
 from flatlib import aspects
 from geopy.geocoders import Nominatim
 from timezonefinder import TimezoneFinder
@@ -44,7 +45,7 @@ if submitted:
             # flatlib用日時
             date_str = utc_dt.strftime("%Y/%m/%d")
             time_str = utc_dt.strftime("%H:%M")
-            fdate = Datetime(date_str, time_str, "+00:00")
+            fdate = fdt(date_str, time_str, "+00:00")
             pos = GeoPos(birth_place_lat, birth_place_lon)
 
             chart = Chart(fdate, pos)
