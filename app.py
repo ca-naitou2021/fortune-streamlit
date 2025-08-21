@@ -39,6 +39,9 @@ if submitted:
     print("pos:", pos)
 
     chart = Chart(fdate, pos)
+    
+    # デバッグ内容出力
+    print(chart)
 
     # ---- 惑星＋感受点 ----
     objects = [
