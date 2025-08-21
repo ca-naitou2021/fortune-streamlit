@@ -32,7 +32,7 @@ if submitted:
     date_str = dt.strftime("%Y/%m/%d")
     time_str = dt.strftime("%H:%M")
     fdate = fdt(date_str, time_str, "+00:00")
-    pos = GeoPos(birth_place_lat, birth_place_lon)
+    pos = GeoPos(location.latitude, location.longitude)
 
     chart = Chart(fdate, pos)
 
