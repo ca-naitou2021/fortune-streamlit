@@ -2,7 +2,7 @@ import streamlit as st
 import json
 from datetime import datetime
 from flatlib.chart import Chart
-from flatlib import GeoPos, datetime as fdt, aspects
+from flatlib.geopos import GeoPos, datetime as fdt, aspects
 from geopy.geocoders import Nominatim
 from timezonefinder import TimezoneFinder
 import pytz
