@@ -1,6 +1,5 @@
 streamlit
 pyswisseph
-geolatlng
 flatlib
 pytz
 geopy
