@@ -23,95 +23,77 @@ if submitted:
     # ---- 住所 → 緯度経度 ----
     geolocator = Nominatim(user_agent="astro_app")
     location = geolocator.geocode(birth_place_name, language="ja")
-    if not location:
-        st.error("住所から緯度経度を取得できませんでした。別の表記を試してください。")
-    else:
-        birth_place_lat = location.latitude
-        birth_place_lon = location.longitude
+    
+        dt = datetime.combine(birth_date, birth_time)
 
-        # ---- 緯度経度 → タイムゾーン ----
-        tf = TimezoneFinder()
-        tz_name = tf.timezone_at(lat=birth_place_lat, lng=birth_place_lon)
+        # flatlib用日時（ここではタイムゾーン+00:00に仮置き）
+        date_str = dt.strftime("%Y/%m/%d")
+        time_str = dt.strftime("%H:%M")
+        fdate = fdt.Date(date_str, time_str, "+00:00")
+        pos = geolatlng.LatLng(birth_place_lat, birth_place_lon)
 
-        if tz_name is None:
-            st.error("タイムゾーンを特定できませんでした。")
-        else:
-            # ---- ローカル時刻をUTCに変換 ----
-            local_tz = pytz.timezone(tz_name)
-            # 入力時間をパース
-            birth_time = datetime.strptime(birth_time_str, "%H:%M").time()
-            naive_dt = datetime.combine(birth_date, birth_time)
-            local_dt = local_tz.localize(naive_dt)
-            utc_dt = local_dt.astimezone(pytz.utc)
+        chart = Chart(fdate, pos)
 
-            # flatlib用日時
-            date_str = utc_dt.strftime("%Y/%m/%d")
-            time_str = utc_dt.strftime("%H:%M")
-            fdate = fdt(date_str, time_str, "+00:00")
-            pos = GeoPos(birth_place_lat, birth_place_lon)
+        # ---- 惑星＋感受点 ----
+        objects = [
+            "Sun", "Moon", "Mercury", "Venus", "Mars",
+            "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto",
+            "ASC", "MC", "IC", "DSC"
+        ]
 
-            chart = Chart(fdate, pos)
-
-            # ---- 惑星＋感受点 ----
-            objects = [
-                "Sun", "Moon", "Mercury", "Venus", "Mars",
-                "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto",
-                "ASC", "MC", "IC", "DSC"
-            ]
-
-            planets_data = {}
-            for obj in objects:
-                item = chart.get(obj)
-                planets_data[obj] = {
-                    "sign": item.sign,
-                    "lon": item.lon,
-                    "lat": item.lat,
-                    "house": item.house,
-                }
-
-            # ---- ハウス ----
-            houses_data = {}
-            for i in range(1, 13):
-                houses_data[str(i)] = {
-                    "sign": chart.houses[i].sign,
-                    "lon": chart.houses[i].lon
-                }
-
-            # ---- アスペクト ----
-            aspects_data = []
-            for asp in aspects.MAJOR_ASPECTS:
-                asp_list = chart.getAspectList(asp, orbs=8)
-                for a in asp_list:
-                    aspects_data.append({
-                        "p1": a.p1,
-                        "p2": a.p2,
-                        "aspect": a.type,
-                        "orb": a.orb
-                    })
-
-            # ---- JSON出力 ----
-            chart_data = {
-                "name": name,
-                "birth": str(local_dt),
-                "timezone": tz_name,
-                "utc_birth": str(utc_dt),
-                "location": {
-                    "name": birth_place_name,
-                    "lat": birth_place_lat,
-                    "lon": birth_place_lon
-                },
-                "planets": planets_data,
-                "houses": houses_data,
-                "aspects": aspects_data
+        planets_data = {}
+        for obj in objects:
+            item = chart.get(obj)
+            planets_data[obj] = {
+                "sign": item.sign,
+                "lon": item.lon,
+                "lat": item.lat,
+                "house": item.house,
             }
 
-            st.subheader("ホロスコープデータ（JSON形式）")
-            st.json(chart_data)
+        # ---- ハウス ----
+        houses_data = {}
+        for i in range(1, 13):
+            houses_data[str(i)] = {
+                "sign": chart.houses[i].sign,
+                "lon": chart.houses[i].lon
+            }
 
-            json_str = json.dumps(chart_data, ensure_ascii=False, indent=2)
-            st.download_button(
-                label="ホロスコープJSONをダウンロード",
-                data=json_str,
-                file_name=f"{name}_horoscope.json",
-                mime="application/json"
-            )
+        # ---- アスペクト ----
+        aspects_data = []
+        for asp in aspects.MAJOR_ASPECTS:
+            asp_list = chart.getAspectList(asp, orbs=8)
+            for a in asp_list:
+                aspects_data.append({
+                    "p1": a.p1,
+                    "p2": a.p2,
+                    "aspect": a.type,
+                    "orb": a.orb
+                })
+
+        # ---- JSON出力 ----
+        chart_data = {
+            "name": name,
+            "birth": str(local_dt),
+            "timezone": tz_name,
+            "utc_birth": str(utc_dt),
+            "location": {
+                "name": birth_place_name,
+                "lat": birth_place_lat,
+                "lon": birth_place_lon
+            },
+            "planets": planets_data,
+            "houses": houses_data,
+            "aspects": aspects_data
+        }
+
+        st.subheader("ホロスコープデータ（JSON形式）")
+        st.json(chart_data)
+
+        json_str = json.dumps(chart_data, ensure_ascii=False, indent=2)
+        st.download_button(
+            label="ホロスコープJSONをダウンロード",
+            data=json_str,
+            file_name=f"{name}_horoscope.json",
+            mime="application/json"
+        )
