@@ -1,6 +1,6 @@
 streamlit
+pyswisseph
 flatlib
 pytz
 geopy
 timezonefinder
-swisseph
