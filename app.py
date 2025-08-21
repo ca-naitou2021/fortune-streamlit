@@ -1,39 +1,113 @@
 import streamlit as st
 import json
 from datetime import datetime
+from flatlib.chart import Chart
+from flatlib import geolatlng, datetime as fdt, aspects
+from geopy.geocoders import Nominatim
+from timezonefinder import TimezoneFinder
+import pytz
 
-# 紫微斗数ライブラリ
-from pyziwei import ZiweiChart
-
-st.title("占いアプリ（JSON出力版）")
+st.title("西洋占星術ホロスコープ計算アプリ")
 
 # ---- 入力フォーム ----
 with st.form("input_form"):
     name = st.text_input("名前")
-    birth_date = st.date_input("生年月日", datetime(1990,1,1))
+    birth_date = st.date_input("生年月日", datetime(1990, 1, 1))
     birth_time = st.time_input("出生時間", datetime.now().time())
-    birth_place = st.text_input("出生地（都市名など）", "Tokyo")
-    gender = st.selectbox("性別", ["male", "female"])
-    school = st.selectbox("流派", ["north", "south"])
-    submitted = st.form_submit_button("占断する")
+    birth_place_name = st.text_input("出生地（例: 東京, 大阪市天王寺区など）", "東京")
+    submitted = st.form_submit_button("ホロスコープを計算する")
 
 if submitted:
-    dt = datetime.combine(birth_date, birth_time)
+    # ---- 住所 → 緯度経度 ----
+    geolocator = Nominatim(user_agent="astro_app")
+    location = geolocator.geocode(birth_place_name, language="ja")
+    if not location:
+        st.error("住所から緯度経度を取得できませんでした。別の表記を試してください。")
+    else:
+        birth_place_lat = location.latitude
+        birth_place_lon = location.longitude
 
-    # ---- 紫微斗数計算 ----
-    # pyziweiは生年月日・出生時間・性別で命盤計算
-    chart = ZiweiChart(year=dt.year, month=dt.month, day=dt.day,
-                       hour=dt.hour, gender=gender)
-    chart.calculate()  # フル計算
-    
-    # JSON化
-    chart_data = {
-        "name": name,
-        "birth": str(dt),
-        "birth_place": birth_place,
-        "gender": gender,
-        "ziwei_chart": chart.to_dict()  # 十二宮・星曜・吉凶など
-    }
+        # ---- 緯度経度 → タイムゾーン ----
+        tf = TimezoneFinder()
+        tz_name = tf.timezone_at(lat=birth_place_lat, lng=birth_place_lon)
 
-    st.subheader("紫微斗数命盤データ（JSON形式）")
-    st.json(chart_data)
+        if tz_name is None:
+            st.error("タイムゾーンを特定できませんでした。")
+        else:
+            # ---- ローカル時刻をUTCに変換 ----
+            local_tz = pytz.timezone(tz_name)
+            naive_dt = datetime.combine(birth_date, birth_time)
+            local_dt = local_tz.localize(naive_dt)
+            utc_dt = local_dt.astimezone(pytz.utc)
+
+            # flatlib用日時
+            date_str = utc_dt.strftime("%Y/%m/%d")
+            time_str = utc_dt.strftime("%H:%M")
+            fdate = fdt.Date(date_str, time_str, "+00:00")
+            pos = geolatlng.LatLng(birth_place_lat, birth_place_lon)
+
+            chart = Chart(fdate, pos)
+
+            # ---- 惑星＋感受点 ----
+            objects = [
+                "Sun", "Moon", "Mercury", "Venus", "Mars",
+                "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto",
+                "ASC", "MC", "IC", "DSC"
+            ]
+
+            planets_data = {}
+            for obj in objects:
+                item = chart.get(obj)
+                planets_data[obj] = {
+                    "sign": item.sign,
+                    "lon": item.lon,
+                    "lat": item.lat,
+                    "house": item.house,
+                }
+
+            # ---- ハウス ----
+            houses_data = {}
+            for i in range(1, 13):
+                houses_data[str(i)] = {
+                    "sign": chart.houses[i].sign,
+                    "lon": chart.houses[i].lon
+                }
+
+            # ---- アスペクト ----
+            aspects_data = []
+            for asp in aspects.MAJOR_ASPECTS:
+                asp_list = chart.getAspectList(asp, orbs=8)
+                for a in asp_list:
+                    aspects_data.append({
+                        "p1": a.p1,
+                        "p2": a.p2,
+                        "aspect": a.type,
+                        "orb": a.orb
+                    })
+
+            # ---- JSON出力 ----
+            chart_data = {
+                "name": name,
+                "birth": str(local_dt),
+                "timezone": tz_name,
+                "utc_birth": str(utc_dt),
+                "location": {
+                    "name": birth_place_name,
+                    "lat": birth_place_lat,
+                    "lon": birth_place_lon
+                },
+                "planets": planets_data,
+                "houses": houses_data,
+                "aspects": aspects_data
+            }
+
+            st.subheader("ホロスコープデータ（JSON形式）")
+            st.json(chart_data)
+
+            json_str = json.dumps(chart_data, ensure_ascii=False, indent=2)
+            st.download_button(
+                label="ホロスコープJSONをダウンロード",
+                data=json_str,
+                file_name=f"{name}_horoscope.json",
+                mime="application/json"
+            )
