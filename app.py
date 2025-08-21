@@ -15,7 +15,7 @@ st.title("西洋占星術ホロスコープ計算アプリ")
 with st.form("input_form"):
     name = st.text_input("名前")
     birth_date = st.date_input("生年月日", datetime(1990, 1, 1))
-    birth_time = st.text_input("出生時間", datetime.now().time())
+    birth_time = st.text_input("出生時間", "00:00")
     birth_place_name = st.text_input("出生地（例: 東京, 大阪市天王寺区など）", "東京")
     submitted = st.form_submit_button("ホロスコープを計算する")
 
