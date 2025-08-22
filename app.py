@@ -1,7 +1,7 @@
 import streamlit as st
 import json
 from datetime import datetime
-from flatlib import const
+from flatlib import const, ephem
 from flatlib.chart import Chart
 from flatlib.geopos import GeoPos
 from flatlib.datetime import Datetime as fdt
