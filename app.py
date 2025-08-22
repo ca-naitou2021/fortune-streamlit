@@ -50,12 +50,10 @@ if submitted:
         idx = int(lon // 30) % 12
         return signs[idx]
     
-    # ------------------------
-    # 惑星＋感受点
-    # ------------------------
+    # ---- 惑星（SUN〜SATURN, ASC, MC） ----
     objects = [
         const.SUN, const.MOON, const.MERCURY, const.VENUS, const.MARS,
-        const.JUPITER, const.SATURN, const.URANUS, const.NEPTUNE, const.PLUTO,
+        const.JUPITER, const.SATURN,
         const.ASC, const.MC
     ]
     
@@ -70,6 +68,16 @@ if submitted:
         if hasattr(body, "house"):
             data["house"] = body.house
         planets[obj] = data
+    
+    # ---- 外惑星（Uranus, Neptune, Pluto） ----
+    for name in ["URANUS", "NEPTUNE", "PLUTO"]:
+        body = ephem.getObject(name, date, pos)
+        planets[name] = {
+            "sign": body.sign,
+            "lon": body.lon,
+            "lat": body.lat,
+            "house": body.house
+        }
     
     # DESC = 第7ハウス始まり
     desc_lon = chart.houses[6]
