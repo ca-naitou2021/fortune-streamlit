@@ -72,12 +72,12 @@ if submitted:
     
     # ---- 外惑星（Uranus, Neptune, Pluto） ----
     for name in ["URANUS", "NEPTUNE", "PLUTO"]:
-        body = ephem.getObject(name, fdate, pos)
+        body = Chart(fdate, pos, name)
         planets[name] = {
-            "sign": body.sign,
-            "lon": body.lon,
-            "lat": body.lat,
-            "house": body.house
+            "sign": body.getObject(name).sign,
+            "lon": body.getObject(name).lon,
+            "lat": body.getObject(name).lat,
+            "house": body.getObject(name).house
         }
     
     # DESC = 第7ハウス始まり
