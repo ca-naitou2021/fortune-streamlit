@@ -5,6 +5,7 @@ from flatlib.chart import Chart
 from flatlib.geopos import GeoPos
 from flatlib.datetime import Datetime as fdt
 from flatlib import aspects
+from flatlib.utils import getHouse
 from geopy.geocoders import Nominatim
 from timezonefinder import TimezoneFinder
 import pytz
