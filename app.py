@@ -50,15 +50,18 @@ if submitted:
         const.ASC, const.MC, const.DESC, const.IC
     ]
 
-    planets = {}
-    for obj in objects:
-        body = chart.get(obj)
-        planets[obj] = {
-            "sign": body.sign,
-            "lon": body.lon,
-            "lat": body.lat,
-            "house": body.house
-        }
+planets = {}
+for obj in objects:
+    body = chart.get(obj)
+    data = {
+        "sign": body.sign,
+        "lon": body.lon,
+        "lat": body.lat,
+    }
+    # 天体だけ house を追加（ASC, MC などは house 無し）
+    if hasattr(body, "house"):
+        data["house"] = body.house
+    planets[obj] = data
 
     # ------------------------
     # ハウス
