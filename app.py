@@ -71,13 +71,14 @@ if submitted:
         planets[obj] = data
     
     # ---- 外惑星（Uranus, Neptune, Pluto） ----
-    for name in ["URANUS", "NEPTUNE", "PLUTO"]:
-        body = Chart(fdate, pos, name)
+    IDs = [const.URANUS, const.NEPTUNE, const.PLUTO]
+    chart_2 = Chart(fdate, pos, IDs=IDs)
+    for body in chart_2.objects:
         planets[name] = {
-            "sign": body.getObject(name).sign,
-            "lon": body.getObject(name).lon,
-            "lat": body.getObject(name).lat,
-            "house": body.getObject(name).house
+            "sign": body.sign,
+            "lon": body.lon,
+            "lat": body.lat,
+            "house": getHouse(body.lon, chart_2.hsys, chart_2.houses).id
         }
     
     # DESC = 第7ハウス始まり
