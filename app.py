@@ -1,10 +1,11 @@
 import streamlit as st
 import json
 from datetime import datetime
-from flatlib import const, ephem
+from flatlib import const
 from flatlib.chart import Chart
 from flatlib.geopos import GeoPos
 from flatlib.datetime import Datetime as fdt
+from flatlib.ephem import ephem
 from flatlib import aspects
 from geopy.geocoders import Nominatim
 from timezonefinder import TimezoneFinder
