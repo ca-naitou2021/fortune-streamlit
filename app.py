@@ -39,66 +39,64 @@ if submitted:
     print("pos:", pos)
 
     chart = Chart(fdate, pos)
-    
-    # デバッグ内容出力
-    print(chart)
 
-    # ---- 惑星＋感受点 ----
+    # ------------------------
+    # 惑星＋感受点
+    # ------------------------
     objects = [
-        "Sun", "Moon", "Mercury", "Venus", "Mars",
-        "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto",
-        "ASC", "MC", "IC", "DSC"
+        const.SUN, const.MOON, const.MERCURY, const.VENUS, const.MARS,
+        const.JUPITER, const.SATURN, const.URANUS, const.NEPTUNE, const.PLUTO,
+        const.ASC, const.MC, const.DESC, const.IC
     ]
 
-    planets_data = {}
+    planets = {}
     for obj in objects:
-        item = chart.get(obj)
-        planets_data[obj] = {
-            "sign": item.sign,
-            "lon": item.lon,
-            "lat": item.lat,
-            "house": item.houses,
+        body = chart.get(obj)
+        planets[obj] = {
+            "sign": body.sign,
+            "lon": body.lon,
+            "lat": body.lat,
+            "house": body.house
         }
 
-    # ---- ハウス ----
-    houses_data = {}
-    for i in range(1, 13):
-        houses_data[str(i)] = {
-            "sign": chart.houses[i].sign,
-            "lon": chart.houses[i].lon
-        }
+    # ------------------------
+    # ハウス
+    # ------------------------
+    houses = {}
+    for i, cusp in enumerate(chart.houses):
+        houses[f"House {i+1}"] = cusp
 
-    # ---- アスペクト ----
-    aspects_data = []
-    for asp in aspects.MAJOR_ASPECTS:
-        asp_list = chart.getAspectList(asp, orbs=8)
-        for a in asp_list:
-            aspects_data.append({
-                "p1": a.p1,
-                "p2": a.p2,
-                "aspect": a.type,
-                "orb": a.orb
-            })
+    # ------------------------
+    # アスペクト
+    # ------------------------
+    aspect_list = []
+    asp = aspects.getAspects(chart.objects, aspects.MAJOR_ASPECTS)
+    for a in asp:
+        aspect_list.append({
+            "p1": a.obj1,
+            "p2": a.obj2,
+            "type": a.type,
+            "orb": a.orb
+        })
 
-    # ---- JSON出力 ----
-    chart_data = {
-        "name": name,
-        "birth": str(local_dt),
-        "timezone": tz_name,
-        "utc_birth": str(utc_dt),
-        "location": {
-            "name": birth_place_name,
-            "lat": birth_place_lat,
-            "lon": birth_place_lon
+    # ------------------------
+    # JSON 出力
+    # ------------------------
+    result = {
+        "birth_data": {
+            "date": fdate,
+            "time": ftime,
+            "place": birth_place,
+            "timezone": tz_str,
         },
-        "planets": planets_data,
-        "houses": houses_data,
-        "aspects": aspects_data
+        "planets_and_points": planets,
+        "houses": houses,
+        "aspects": aspect_list
     }
 
-    st.subheader("ホロスコープデータ（JSON形式）")
-    st.json(chart_data)
-
+    st.subheader("計算結果 (JSON)")
+    st.json(result)
+    
     json_str = json.dumps(chart_data, ensure_ascii=False, indent=2)
     st.download_button(
         label="ホロスコープJSONをダウンロード",
