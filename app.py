@@ -41,15 +41,24 @@ if submitted:
 
     chart = Chart(fdate, pos)
 
+    # 黄経からサイン名を返す関数
+    def get_sign(lon):
+        signs = [
+            const.ARIES, const.TAURUS, const.GEMINI, const.CANCER, const.LEO, const.VIRGO,
+            const.LIBRA, const.SCORPIO, const.SAGITTARIUS, const.CAPRICORN, const.AQUARIUS, const.PISCES
+        ]
+        idx = int(lon // 30) % 12
+        return signs[idx]
+    
     # ------------------------
     # 惑星＋感受点
     # ------------------------
     objects = [
         const.SUN, const.MOON, const.MERCURY, const.VENUS, const.MARS,
         const.JUPITER, const.SATURN, const.URANUS, const.NEPTUNE, const.PLUTO,
-        const.ASC, const.MC, const.DESC, const.IC
+        const.ASC, const.MC
     ]
-
+    
     planets = {}
     for obj in objects:
         body = chart.get(obj)
@@ -58,10 +67,31 @@ if submitted:
             "lon": body.lon,
             "lat": body.lat,
         }
-        # 天体だけ house を追加（ASC, MC などは house 無し）
         if hasattr(body, "house"):
             data["house"] = body.house
         planets[obj] = data
+    
+    # DESC = 第7ハウス始まり
+    desc_lon = chart.houses[6]
+    planets["DESC"] = {
+        "lon": desc_lon,
+        "sign": get_sign(desc_lon),
+        "lat": None,
+        "house": 7
+    }
+    
+    # IC = 第4ハウス始まり
+    ic_lon = chart.houses[3]
+    planets["IC"] = {
+        "lon": ic_lon,
+        "sign": get_sign(ic_lon),
+        "lat": None,
+        "house": 4
+    }
+    
+    # ASC と MC にも house を明示
+    planets["ASC"]["house"] = 1
+    planets["MC"]["house"] = 10
 
     # ------------------------
     # ハウス
