@@ -1,5 +1,5 @@
 streamlit
-pyswisseph==2.10.3.2
+pyswisseph==2.08.00-1
 flatlib==0.2.3
 pytz
 geopy
