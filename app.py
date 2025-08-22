@@ -57,7 +57,7 @@ if submitted:
             "sign": item.sign,
             "lon": item.lon,
             "lat": item.lat,
-            "house": chart.getHouse(item.lon).id,
+            "house": getHouse(item.lon, chart.hsys, chart.houses).id,
         }
 
     # ---- ハウス ----
