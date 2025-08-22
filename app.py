@@ -72,7 +72,7 @@ if submitted:
     
     # ---- 外惑星（Uranus, Neptune, Pluto） ----
     for name in ["URANUS", "NEPTUNE", "PLUTO"]:
-        body = ephem.getObject(name, date, pos)
+        body = ephem.getObject(name, fdate, pos)
         planets[name] = {
             "sign": body.sign,
             "lon": body.lon,
