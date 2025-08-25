@@ -7,7 +7,6 @@ from flatlib.geopos import GeoPos
 from flatlib.datetime import Datetime as fdt
 from flatlib.ephem import ephem
 from flatlib import aspects
-# from flatlib.utils import getHouse # <- この行を削除
 from geopy.geocoders import Nominatim
 from timezonefinder import TimezoneFinder
 import pytz
@@ -56,7 +55,6 @@ if submitted:
         time_str = utc_dt.strftime("%H:%M")
         
         # タイムゾーンオフセットを取得し、flatlib形式で設定
-        # 修正: utcoffsetに、タイムゾーン情報のないdtを渡す
         tz_offset_seconds = local_tz.utcoffset(dt).total_seconds()
         tz_offset_hours = int(tz_offset_seconds / 3600)
         tz_offset_sign = "+" if tz_offset_hours >= 0 else ""
@@ -100,12 +98,17 @@ if submitted:
         # ---- 外惑星（Uranus, Neptune, Pluto） ----
         IDs = [const.URANUS, const.NEPTUNE, const.PLUTO]
         chart_2 = Chart(fdate, pos, IDs=IDs)
+        
+        # 修正: chart.housesとchart_2.housesをリストに変換
+        chart_houses = list(chart.houses)
+        chart_2_houses = list(chart_2.houses)
+        
         for body in chart_2.objects:
             # 手動でハウスを特定
             house_id = 1
             for i in range(12):
-                house_start_lon = chart_2.houses[i].lon
-                next_house_start_lon = chart_2.houses[(i + 1) % 12].lon
+                house_start_lon = chart_2_houses[i].lon
+                next_house_start_lon = chart_2_houses[(i + 1) % 12].lon
                 
                 # 惑星の黄経がハウスの開始点の間にあるかチェック
                 if i < 11:
@@ -125,7 +128,7 @@ if submitted:
             }
         
         # DESC = 第7ハウス始まり
-        desc_lon = chart.houses[6].lon
+        desc_lon = chart_houses[6].lon
         planets["DESC"] = {
             "lon": desc_lon,
             "sign": get_sign(desc_lon),
@@ -134,7 +137,7 @@ if submitted:
         }
         
         # IC = 第4ハウス始まり
-        ic_lon = chart.houses[3].lon
+        ic_lon = chart_houses[3].lon
         planets["IC"] = {
             "lon": ic_lon,
             "sign": get_sign(ic_lon),
@@ -150,7 +153,7 @@ if submitted:
         # ハウス
         # ------------------------
         houses = {}
-        for i, cusp in enumerate(chart.houses):
+        for i, cusp in enumerate(chart_houses):
             houses[f"House {i+1}"] = {
                 "lon": cusp.lon,
                 "sign": cusp.sign,
