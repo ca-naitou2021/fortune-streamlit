@@ -54,8 +54,10 @@ if submitted:
         # flatlib用日時
         date_str = utc_dt.strftime("%Y/%m/%d")
         time_str = utc_dt.strftime("%H:%M")
+        
         # タイムゾーンオフセットを取得し、flatlib形式で設定
-        tz_offset_seconds = local_tz.utcoffset(localized_dt).total_seconds()
+        # 修正: utcoffsetに、タイムゾーン情報のないdtを渡す
+        tz_offset_seconds = local_tz.utcoffset(dt).total_seconds()
         tz_offset_hours = int(tz_offset_seconds / 3600)
         tz_offset_sign = "+" if tz_offset_hours >= 0 else ""
         tz_str = f"{tz_offset_sign}{tz_offset_hours:02d}:00"
