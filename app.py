@@ -7,7 +7,7 @@ from flatlib.geopos import GeoPos
 from flatlib.datetime import Datetime as fdt
 from flatlib.ephem import ephem
 from flatlib import aspects
-from flatlib.utils import getHouse
+# from flatlib.utils import getHouse # <- この行を削除
 from geopy.geocoders import Nominatim
 from timezonefinder import TimezoneFinder
 import pytz
@@ -55,23 +55,19 @@ if submitted:
         date_str = utc_dt.strftime("%Y/%m/%d")
         time_str = utc_dt.strftime("%H:%M")
         # タイムゾーンオフセットを取得し、flatlib形式で設定
-        # pytzのタイムゾーン情報をflatlibのオフセット形式に変換
         tz_offset_seconds = local_tz.utcoffset(localized_dt).total_seconds()
         tz_offset_hours = int(tz_offset_seconds / 3600)
-        # オフセットの符号をflatlibの形式に合わせる
         tz_offset_sign = "+" if tz_offset_hours >= 0 else ""
         tz_str = f"{tz_offset_sign}{tz_offset_hours:02d}:00"
         
         fdate = fdt(date_str, time_str, tz_str)
         pos = GeoPos(location.latitude, location.longitude)
 
-        # デバッグ内容出力
         print("fdate:", fdate)
         print("pos:", pos)
 
         chart = Chart(fdate, pos)
 
-        # 黄経からサイン名を返す関数
         def get_sign(lon):
             signs = [
                 const.ARIES, const.TAURUS, const.GEMINI, const.CANCER, const.LEO, const.VIRGO,
@@ -95,7 +91,6 @@ if submitted:
                 "lon": body.lon,
                 "lat": body.lat,
             }
-            # ASC, MCはhouse情報を持たないため、house属性のチェックを追加
             if hasattr(body, "house"):
                 data["house"] = body.house
             planets[obj] = data
@@ -104,12 +99,27 @@ if submitted:
         IDs = [const.URANUS, const.NEPTUNE, const.PLUTO]
         chart_2 = Chart(fdate, pos, IDs=IDs)
         for body in chart_2.objects:
-            # 修正: キーを惑星名に設定
+            # 手動でハウスを特定
+            house_id = 1
+            for i in range(12):
+                house_start_lon = chart_2.houses[i].lon
+                next_house_start_lon = chart_2.houses[(i + 1) % 12].lon
+                
+                # 惑星の黄経がハウスの開始点の間にあるかチェック
+                if i < 11:
+                    if house_start_lon <= body.lon < next_house_start_lon:
+                        house_id = i + 1
+                        break
+                else:
+                    if house_start_lon <= body.lon or body.lon < next_house_start_lon:
+                        house_id = i + 1
+                        break
+
             planets[body.id] = {
                 "sign": body.sign,
                 "lon": body.lon,
                 "lat": body.lat,
-                "house": getHouse(body.lon, chart_2.hsys, chart_2.houses).id
+                "house": house_id
             }
         
         # DESC = 第7ハウス始まり
@@ -148,13 +158,12 @@ if submitted:
         # アスペクト
         # ------------------------
         aspect_list = []
-        # Chart.objectsに外惑星が含まれないため、リストを結合
         all_objects = chart.objects + chart_2.objects
         asp = aspects.getAspects(all_objects, aspects.MAJOR_ASPECTS)
         for a in asp:
             aspect_list.append({
-                "p1": a.obj1.id, # 修正: オブジェクトIDを格納
-                "p2": a.obj2.id, # 修正: オブジェクトIDを格納
+                "p1": a.obj1.id,
+                "p2": a.obj2.id,
                 "type": a.type,
                 "orb": a.orb
             })
@@ -178,7 +187,7 @@ if submitted:
         st.subheader("計算結果 (JSON)")
         st.json(result)
         
-        json_str = json.dumps(result, ensure_ascii=False, indent=2) # 修正: chart_dataをresultに
+        json_str = json.dumps(result, ensure_ascii=False, indent=2)
         st.download_button(
             label="ホロスコープJSONをダウンロード",
             data=json_str,
