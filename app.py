@@ -85,15 +85,19 @@ if submitted:
         
         planets = {}
         for obj in objects:
-            body = chart.get(obj)
-            data = {
-                "sign": body.sign,
-                "lon": body.lon,
-                "lat": body.lat,
-            }
-            if hasattr(body, "house"):
-                data["house"] = body.house
-            planets[obj] = data
+            try:
+                body = chart.get(obj)
+                data = {
+                    "sign": body.sign,
+                    "lon": body.lon,
+                    "lat": body.lat,
+                }
+                if hasattr(body, "house"):
+                    data["house"] = body.house
+                planets[obj] = data
+            except Exception as e:
+                # 惑星の取得に失敗した場合でも続行できるようにする
+                print(f"Failed to get object {obj}: {e}")
         
         # ---- 外惑星（Uranus, Neptune, Pluto） ----
         IDs = [const.URANUS, const.NEPTUNE, const.PLUTO]
@@ -128,26 +132,55 @@ if submitted:
             }
         
         # DESC = 第7ハウス始まり
-        desc_lon = chart_houses[6].lon
-        planets["DESC"] = {
-            "lon": desc_lon,
-            "sign": get_sign(desc_lon),
-            "lat": None,
-            "house": 7
-        }
-        
+        # 修正: ASCとMCの存在をチェックしてからアクセスする
+        if "ASC" in planets:
+            desc_lon = planets["ASC"]["lon"] + 180
+            # 360度を超える場合は調整
+            if desc_lon >= 360:
+                desc_lon -= 360
+            planets["DESC"] = {
+                "lon": desc_lon,
+                "sign": get_sign(desc_lon),
+                "lat": None,
+                "house": 7
+            }
+        else:
+            # ASCがない場合は、第7ハウスの開始点を使用
+            desc_lon = chart_houses[6].lon
+            planets["DESC"] = {
+                "lon": desc_lon,
+                "sign": get_sign(desc_lon),
+                "lat": None,
+                "house": 7
+            }
+
         # IC = 第4ハウス始まり
-        ic_lon = chart_houses[3].lon
-        planets["IC"] = {
-            "lon": ic_lon,
-            "sign": get_sign(ic_lon),
-            "lat": None,
-            "house": 4
-        }
+        if "MC" in planets:
+            ic_lon = planets["MC"]["lon"] + 180
+            # 360度を超える場合は調整
+            if ic_lon >= 360:
+                ic_lon -= 360
+            planets["IC"] = {
+                "lon": ic_lon,
+                "sign": get_sign(ic_lon),
+                "lat": None,
+                "house": 4
+            }
+        else:
+            # MCがない場合は、第4ハウスの開始点を使用
+            ic_lon = chart_houses[3].lon
+            planets["IC"] = {
+                "lon": ic_lon,
+                "sign": get_sign(ic_lon),
+                "lat": None,
+                "house": 4
+            }
         
         # ASC と MC にも house を明示
-        planets["ASC"]["house"] = 1
-        planets["MC"]["house"] = 10
+        if "ASC" in planets:
+            planets["ASC"]["house"] = 1
+        if "MC" in planets:
+            planets["MC"]["house"] = 10
 
         # ------------------------
         # ハウス
