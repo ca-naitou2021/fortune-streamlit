@@ -12,8 +12,8 @@ from datetime import datetime
 st.title("西洋占星術ホロスコープ計算アプリ")
 
 name = st.text_input("名前")
-birth_date = st.date_input("生年月日")  # datetime.date型で返る
-birth_time = st.time_input("出生時間")   # datetime.time型で返る
+birth_date = st.date_input("生年月日")  # → datetime.date 型
+birth_time = st.text_input("出生時間 (HH:MM)")  # → 手入力
 birth_place = st.text_input("出生地 (例: 東京, 大阪市天王寺区など)")
 
 if st.button("ホロスコープを計算する"):
@@ -34,15 +34,22 @@ if st.button("ホロスコープを計算する"):
             else:
                 tz = pytz.timezone(tz_name)
 
-                # Pythonのdatetimeにまとめる
-                naive_dt = datetime.combine(birth_date, birth_time)
+                # --- Python datetime用 ---
+                # birth_time をパースして datetime.time に変換
+                try:
+                    time_obj = datetime.strptime(birth_time, "%H:%M").time()
+                except ValueError:
+                    st.error("出生時間は HH:MM 形式で入力してください。")
+                    st.stop()
+
+                naive_dt = datetime.combine(birth_date, time_obj)
                 local_dt = tz.localize(naive_dt)
 
-                # flatlib用に文字列に変換
-                date_str = birth_date.strftime("%Y/%m/%d")  # flatlib用に / 区切り
-                time_str = birth_time.strftime("%H:%M")
+                # --- flatlib Datetime用 ---
+                date_str = birth_date.strftime("%Y/%m/%d")  # flatlibはスラッシュ形式
+                time_str = time_obj.strftime("%H:%M")
                 offset = local_dt.strftime("%z")
-                offset = offset[:3] + ":" + offset[3:]  # +09:00 形式に修正
+                offset = offset[:3] + ":" + offset[3:]
                 dt = Datetime(date_str, time_str, offset)
 
                 # --- チャート作成 ---
@@ -93,7 +100,6 @@ if st.button("ホロスコープを計算する"):
                 st.subheader("ホロスコープJSON")
                 st.json(chart_json)
 
-                # 保存オプション
                 json_str = json.dumps(chart_json, ensure_ascii=False, indent=2)
                 st.download_button("JSONをダウンロード", json_str, file_name=f"{name}_chart.json")
 
