@@ -12,8 +12,8 @@ from datetime import datetime
 st.title("西洋占星術ホロスコープ計算アプリ")
 
 name = st.text_input("名前")
-birth_date = st.text_input("生年月日 (例: 1990/01/01)")
-birth_time = st.text_input("出生時間 (例: 12:34)")
+birth_date = st.date_input("生年月日")  # datetime.date型で返る
+birth_time = st.time_input("出生時間")   # datetime.time型で返る
 birth_place = st.text_input("出生地 (例: 東京, 大阪市天王寺区など)")
 
 if st.button("ホロスコープを計算する"):
@@ -34,15 +34,16 @@ if st.button("ホロスコープを計算する"):
             else:
                 tz = pytz.timezone(tz_name)
 
-                # 入力文字列を datetime に変換
-                date_str = birth_date.replace("-", "/")
-                naive_dt = datetime.strptime(f"{date_str} {birth_time}", "%Y-%m-%d %H:%M")
+                # Pythonのdatetimeにまとめる
+                naive_dt = datetime.combine(birth_date, birth_time)
                 local_dt = tz.localize(naive_dt)
 
-                # flatlib用 Datetime (UTCベースで扱う)
-                offset = local_dt.strftime("%z")  # 例: +0900
-                offset = offset[:3] + ":" + offset[3:]  # +09:00 の形に修正
-                dt = Datetime(date_str, birth_time, offset)
+                # flatlib用に文字列に変換
+                date_str = birth_date.strftime("%Y/%m/%d")  # flatlib用に / 区切り
+                time_str = birth_time.strftime("%H:%M")
+                offset = local_dt.strftime("%z")
+                offset = offset[:3] + ":" + offset[3:]  # +09:00 形式に修正
+                dt = Datetime(date_str, time_str, offset)
 
                 # --- チャート作成 ---
                 pos = GeoPos(lat, lon)
@@ -70,7 +71,7 @@ if st.button("ホロスコープを計算する"):
                         "orb": round(asp.orb, 2)
                     })
 
-                # --- まとめてJSONに ---
+                # --- JSON 出力 ---
                 chart_json = {
                     "metadata": {
                         "name": name,
@@ -92,7 +93,7 @@ if st.button("ホロスコープを計算する"):
                 st.subheader("ホロスコープJSON")
                 st.json(chart_json)
 
-                # 保存用にファイル出力オプション
+                # 保存オプション
                 json_str = json.dumps(chart_json, ensure_ascii=False, indent=2)
                 st.download_button("JSONをダウンロード", json_str, file_name=f"{name}_chart.json")
 
