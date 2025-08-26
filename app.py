@@ -35,7 +35,7 @@ if st.button("ホロスコープを計算する"):
                 tz = pytz.timezone(tz_name)
 
                 # 入力文字列を datetime に変換
-                date_str = birth_date.replace("/", "-")
+                date_str = birth_date.replace("-", "/")
                 naive_dt = datetime.strptime(f"{date_str} {birth_time}", "%Y-%m-%d %H:%M")
                 local_dt = tz.localize(naive_dt)
 
