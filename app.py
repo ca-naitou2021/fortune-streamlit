@@ -1,238 +1,100 @@
 import streamlit as st
-import json
-from datetime import datetime
-from flatlib import const
 from flatlib.chart import Chart
+from flatlib.datetime import Datetime
 from flatlib.geopos import GeoPos
-from flatlib.datetime import Datetime as fdt
-from flatlib.ephem import ephem
-from flatlib import aspects
+from flatlib import aspects, const
 from geopy.geocoders import Nominatim
 from timezonefinder import TimezoneFinder
 import pytz
-import traceback
+import json
+from datetime import datetime
 
 st.title("西洋占星術ホロスコープ計算アプリ")
 
-# ---- 入力フォーム ----
-with st.form("input_form"):
-    name = st.text_input("名前")
-    birth_date = st.date_input("生年月日", datetime(1990, 1, 1))
-    birth_time_str = st.text_input("出生時間", "00:00")
-    birth_place_name = st.text_input("出生地（例: 東京, 大阪市天王寺区など）", "東京")
-    submitted = st.form_submit_button("ホロスコープを計算する")
+name = st.text_input("名前")
+birth_date = st.text_input("生年月日 (例: 1990/01/01)")
+birth_time = st.text_input("出生時間 (例: 12:34)")
+birth_place = st.text_input("出生地 (例: 東京, 大阪市天王寺区など)")
 
-if submitted:
+if st.button("ホロスコープを計算する"):
     try:
-        # ---- 住所 → 緯度経度・タイムゾーン ----
+        # --- 位置情報を取得 ---
         geolocator = Nominatim(user_agent="astro_app")
-        location = geolocator.geocode(birth_place_name, language="ja")
-        
-        if location is None:
-            st.error("出生地が見つかりませんでした。より正確な地名を入力してください。")
-            st.stop()
-            
-        tf = TimezoneFinder()
-        tz_name = tf.timezone_at(lng=location.longitude, lat=location.latitude)
-        
-        if tz_name is None:
-            st.error("出生地のタイムゾーンを特定できませんでした。")
-            st.stop()
+        location = geolocator.geocode(birth_place)
+        if not location:
+            st.error("出生地が見つかりません。別の表記を試してください。")
+        else:
+            lat, lon = location.latitude, location.longitude
 
-        local_tz = pytz.timezone(tz_name)
-        
-        # 入力時間をパース
-        birth_time = datetime.strptime(birth_time_str, "%H:%M").time()
-        dt = datetime.combine(birth_date, birth_time)
-        
-        # タイムゾーンを適用
-        localized_dt = local_tz.localize(dt)
-        # UTCに変換
-        utc_dt = localized_dt.astimezone(pytz.utc)
+            # --- タイムゾーンを算出 ---
+            tf = TimezoneFinder()
+            tz_name = tf.timezone_at(lat=lat, lng=lon)
+            if tz_name is None:
+                st.error("タイムゾーンが見つかりません。")
+            else:
+                tz = pytz.timezone(tz_name)
 
-        # flatlib用日時
-        date_str = utc_dt.strftime("%Y/%m/%d")
-        time_str = utc_dt.strftime("%H:%M")
-        
-        # タイムゾーンオフセットを取得し、flatlib形式で設定
-        tz_offset_seconds = local_tz.utcoffset(dt).total_seconds()
-        tz_offset_hours = int(tz_offset_seconds / 3600)
-        tz_offset_sign = "+" if tz_offset_hours >= 0 else ""
-        tz_str = f"{tz_offset_sign}{tz_offset_hours:02d}:00"
-        
-        fdate = fdt(date_str, time_str, tz_str)
-        pos = GeoPos(location.latitude, location.longitude)
+                # 入力文字列を datetime に変換
+                date_str = birth_date.replace("/", "-")
+                naive_dt = datetime.strptime(f"{date_str} {birth_time}", "%Y-%m-%d %H:%M")
+                local_dt = tz.localize(naive_dt)
 
-        print("fdate:", fdate)
-        print("pos:", pos)
+                # flatlib用 Datetime (UTCベースで扱う)
+                offset = local_dt.strftime("%z")  # 例: +0900
+                offset = offset[:3] + ":" + offset[3:]  # +09:00 の形に修正
+                dt = Datetime(date_str, birth_time, offset)
 
-        chart = Chart(fdate, pos)
+                # --- チャート作成 ---
+                pos = GeoPos(lat, lon)
+                chart = Chart(dt, pos, hsys='Placidus')
 
-        def get_sign(lon):
-            signs = [
-                const.ARIES, const.TAURUS, const.GEMINI, const.CANCER, const.LEO, const.VIRGO,
-                const.LIBRA, const.SCORPIO, const.SAGITTARIUS, const.CAPRICORN, const.AQUARIUS, const.PISCES
-            ]
-            idx = int(lon // 30) % 12
-            return signs[idx]
-        
-        # ---- 惑星（SUN〜SATURN, ASC, MC） ----
-        objects = [
-            const.SUN, const.MOON, const.MERCURY, const.VENUS, const.MARS,
-            const.JUPITER, const.SATURN,
-            const.ASC, const.MC
-        ]
-        
-        planets = {}
-        for obj in objects:
-            try:
-                body = chart.get(obj)
-                data = {
-                    "sign": body.sign,
-                    "lon": body.lon,
-                    "lat": body.lat,
+                # --- 惑星情報 ---
+                planets_data = {}
+                for p in const.LIST_OBJECTS:
+                    obj = chart.get(p)
+                    planets_data[p] = {
+                        "sign": obj.sign,
+                        "house": obj.house,
+                        "lon": round(obj.lon, 2),
+                    }
+
+                # --- アスペクト情報 ---
+                objs = [chart.get(obj) for obj in const.LIST_OBJECTS]
+                asp_list = aspects.getAspects(objs, aspects.MAJOR_ASPECTS, 8)
+                aspect_data = []
+                for asp in asp_list:
+                    aspect_data.append({
+                        "p1": asp.obj1,
+                        "p2": asp.obj2,
+                        "type": asp.type,
+                        "orb": round(asp.orb, 2)
+                    })
+
+                # --- まとめてJSONに ---
+                chart_json = {
+                    "metadata": {
+                        "name": name,
+                        "datetime_local": local_dt.isoformat(),
+                        "datetime_utc": local_dt.astimezone(pytz.utc).isoformat(),
+                        "timezone": tz_name,
+                        "location": {
+                            "place": birth_place,
+                            "lat": lat,
+                            "lon": lon
+                        },
+                        "house_system": "Placidus",
+                        "zodiac": "tropical"
+                    },
+                    "planets": planets_data,
+                    "aspects": aspect_data
                 }
-                if hasattr(body, "house"):
-                    data["house"] = body.house
-                planets[obj] = data
-            except Exception as e:
-                # 惑星の取得に失敗した場合でも続行できるようにする
-                print(f"Failed to get object {obj}: {e}")
-        
-        # ---- 外惑星（Uranus, Neptune, Pluto） ----
-        IDs = [const.URANUS, const.NEPTUNE, const.PLUTO]
-        chart_2 = Chart(fdate, pos, IDs=IDs)
-        
-        # 修正: chart.housesとchart_2.housesをリストに変換
-        chart_houses = list(chart.houses)
-        chart_2_houses = list(chart_2.houses)
-        
-        for body in chart_2.objects:
-            # 手動でハウスを特定
-            house_id = 1
-            for i in range(12):
-                house_start_lon = chart_2_houses[i].lon
-                next_house_start_lon = chart_2_houses[(i + 1) % 12].lon
-                
-                # 惑星の黄経がハウスの開始点の間にあるかチェック
-                if i < 11:
-                    if house_start_lon <= body.lon < next_house_start_lon:
-                        house_id = i + 1
-                        break
-                else:
-                    if house_start_lon <= body.lon or body.lon < next_house_start_lon:
-                        house_id = i + 1
-                        break
 
-            planets[body.id] = {
-                "sign": body.sign,
-                "lon": body.lon,
-                "lat": body.lat,
-                "house": house_id
-            }
-        
-        # DESC = 第7ハウス始まり
-        # 修正: ASCとMCの存在をチェックしてからアクセスする
-        if "ASC" in planets:
-            desc_lon = planets["ASC"]["lon"] + 180
-            # 360度を超える場合は調整
-            if desc_lon >= 360:
-                desc_lon -= 360
-            planets["DESC"] = {
-                "lon": desc_lon,
-                "sign": get_sign(desc_lon),
-                "lat": None,
-                "house": 7
-            }
-        else:
-            # ASCがない場合は、第7ハウスの開始点を使用
-            desc_lon = chart_houses[6].lon
-            planets["DESC"] = {
-                "lon": desc_lon,
-                "sign": get_sign(desc_lon),
-                "lat": None,
-                "house": 7
-            }
+                st.subheader("ホロスコープJSON")
+                st.json(chart_json)
 
-        # IC = 第4ハウス始まり
-        if "MC" in planets:
-            ic_lon = planets["MC"]["lon"] + 180
-            # 360度を超える場合は調整
-            if ic_lon >= 360:
-                ic_lon -= 360
-            planets["IC"] = {
-                "lon": ic_lon,
-                "sign": get_sign(ic_lon),
-                "lat": None,
-                "house": 4
-            }
-        else:
-            # MCがない場合は、第4ハウスの開始点を使用
-            ic_lon = chart_houses[3].lon
-            planets["IC"] = {
-                "lon": ic_lon,
-                "sign": get_sign(ic_lon),
-                "lat": None,
-                "house": 4
-            }
-        
-        # ASC と MC にも house を明示
-        if "ASC" in planets:
-            planets["ASC"]["house"] = 1
-        if "MC" in planets:
-            planets["MC"]["house"] = 10
+                # 保存用にファイル出力オプション
+                json_str = json.dumps(chart_json, ensure_ascii=False, indent=2)
+                st.download_button("JSONをダウンロード", json_str, file_name=f"{name}_chart.json")
 
-        # ------------------------
-        # ハウス
-        # ------------------------
-        houses = {}
-        for i, cusp in enumerate(chart_houses):
-            houses[f"House {i+1}"] = {
-                "lon": cusp.lon,
-                "sign": cusp.sign,
-            }
-
-        # ------------------------
-        # アスペクト
-        # ------------------------
-        aspect_list = []
-        all_objects = chart.objects + chart_2.objects
-        asp = aspects.getAspects(all_objects, aspects.MAJOR_ASPECTS)
-        for a in asp:
-            aspect_list.append({
-                "p1": a.obj1.id,
-                "p2": a.obj2.id,
-                "type": a.type,
-                "orb": a.orb
-            })
-
-        # ------------------------
-        # JSON 出力
-        # ------------------------
-        result = {
-            "birth_data": {
-                "name": name,
-                "date": str(birth_date),
-                "time": birth_time_str,
-                "place": birth_place_name,
-                "timezone": tz_name,
-            },
-            "planets_and_points": planets,
-            "houses": houses,
-            "aspects": aspect_list
-        }
-
-        st.subheader("計算結果 (JSON)")
-        st.json(result)
-        
-        json_str = json.dumps(result, ensure_ascii=False, indent=2)
-        st.download_button(
-            label="ホロスコープJSONをダウンロード",
-            data=json_str,
-            file_name=f"{name}_horoscope.json",
-            mime="application/json"
-        )
-        
     except Exception as e:
-        st.error(f"エラーが発生しました: {e}")
-        st.error(f"詳細: {traceback.format_exc()}")
+        st.error(f"エラー: {e}")
