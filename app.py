@@ -12,7 +12,7 @@ from datetime import datetime
 st.title("西洋占星術ホロスコープ計算アプリ")
 
 name = st.text_input("名前")
-birth_date = st.date_input("生年月日")  # → datetime.date 型
+birth_date = st.date_input("生年月日", datetime(1990, 1, 1))  # → datetime.date 型
 birth_time = st.text_input("出生時間 (HH:MM)")  # → 手入力
 birth_place = st.text_input("出生地 (例: 東京, 大阪市天王寺区など)")
 
